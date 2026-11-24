@@ -1,181 +1,102 @@
 
 <!DOCTYPE html>
-<html lang="id">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Snake Nokia Classic</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snake Mini</title>
 
 <style>
-    body {
-        background: #222;
-        color: #c7d6a5;
-        font-family: monospace;
-        text-align: center;
-        padding: 20px;
-    }
+body {
+    background: #222;
+    color: white;
+    text-align: center;
+    font-family: monospace;
+}
 
-    h1 {
-        font-size: 26px;
-    }
+canvas {
+    background: #9bbc0f;
+    display: block;
+    margin: 15px auto;
+    border: 3px solid #111;
+}
 
-    #screen {
-        display: inline-block;
-        background: #9bbc0f;
-        padding: 10px;
-        border: 5px solid #333;
-        border-radius: 8px;
-    }
-
-    canvas {
-        display: block;
-        background: #9bbc0f;
-        image-rendering: pixelated;
-    }
-
-    button {
-        background: #596b25;
-        color: #d8e7b0;
-        border: 2px solid #9bbc0f;
-        padding: 10px 20px;
-        margin-top: 12px;
-        font-family: monospace;
-        cursor: pointer;
-    }
-
-    #info {
-        margin: 12px;
-        color: #c7d6a5;
-    }
+button {
+    padding: 8px 20px;
+    cursor: pointer;
+}
 </style>
 </head>
 
 <body>
 
-<h1>SNAKE NOKIA</h1>
+<h2>SNAKE MINI</h2>
+<p>Score: <span id="score">0</span></p>
 
-<div id="screen">
-    <div style="color:#253406; font-weight:bold; padding:5px">
-        SCORE: <span id="score">0</span>
-    </div>
+<canvas id="game" width="300" height="300"></canvas>
 
-    <canvas id="game" width="400" height="400"></canvas>
-</div>
-
-<div id="info">PRESS ARROW KEY TO START</div>
-
-<br>
-<button onclick="resetGame()">RESTART</button>
+<p id="status">Tekan tombol panah untuk mulai</p>
+<button onclick="start()">RESTART</button>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const c = document.getElementById("game");
+const ctx = c.getContext("2d");
+const size = 15;
+const max = 20;
 
-const cell = 20;
-const grid = 20;
+let snake, food, dx, dy, score, running, timer;
 
-let snake;
-let food;
-let dx;
-let dy;
-let score;
-let started;
-let ended;
-let timer;
-
-function resetGame() {
+function start() {
     clearInterval(timer);
 
-    snake = [
-        {x: 8, y: 10},
-        {x: 7, y: 10},
-        {x: 6, y: 10}
-    ];
-
+    snake = [{x: 10, y: 10}];
+    food = {x: 15, y: 10};
     dx = 0;
     dy = 0;
     score = 0;
-    started = false;
-    ended = false;
+    running = true;
 
-    document.getElementById("score").textContent = score;
-    document.getElementById("info").textContent =
-        "PRESS ARROW KEY TO START";
+    document.getElementById("score").textContent = 0;
+    document.getElementById("status").textContent = "PLAYING";
 
-    spawnFood();
     draw();
-
-    timer = setInterval(update, 120);
-}
-
-function spawnFood() {
-    do {
-        food = {
-            x: Math.floor(Math.random() * grid),
-            y: Math.floor(Math.random() * grid)
-        };
-    } while (snake.some(part =>
-        part.x === food.x && part.y === food.y
-    ));
+    timer = setInterval(update, 150);
 }
 
 function draw() {
     ctx.fillStyle = "#9bbc0f";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, 300, 300);
 
-    // Makanan
     ctx.fillStyle = "#253406";
-    ctx.fillRect(
-        food.x * cell,
-        food.y * cell,
-        cell,
-        cell
-    );
+    ctx.fillRect(food.x * size, food.y * size, size, size);
 
-    // Ular
-    snake.forEach(part => {
-        ctx.fillStyle = "#253406";
-        ctx.fillRect(
-            part.x * cell,
-            part.y * cell,
-            cell,
-            cell
-        );
-    });
+    for (let p of snake) {
+        ctx.fillRect(p.x * size, p.y * size, size, size);
+    }
 }
 
 function update() {
-    if (!started || ended) return;
+    if (dx === 0 && dy === 0) return;
 
-    const head = {
+    let head = {
         x: snake[0].x + dx,
         y: snake[0].y + dy
     };
 
-    const eating =
-        head.x === food.x &&
-        head.y === food.y;
+    let eating = head.x === food.x && head.y === food.y;
 
-    // Tabrak dinding
     if (
-        head.x < 0 ||
-        head.y < 0 ||
-        head.x >= grid ||
-        head.y >= grid
+        head.x < 0 || head.y < 0 ||
+        head.x >= max || head.y >= max
     ) {
-        gameOver();
+        end();
         return;
     }
 
-    // Cek tubuh
-    const checkBody = eating
-        ? snake
-        : snake.slice(0, -1);
+    let body = eating ? snake : snake.slice(0, -1);
 
-    if (checkBody.some(part =>
-        part.x === head.x && part.y === head.y
-    )) {
-        gameOver();
+    if (body.some(p => p.x === head.x && p.y === head.y)) {
+        end();
         return;
     }
 
@@ -184,7 +105,15 @@ function update() {
     if (eating) {
         score += 10;
         document.getElementById("score").textContent = score;
-        spawnFood();
+
+        do {
+            food = {
+                x: Math.floor(Math.random() * max),
+                y: Math.floor(Math.random() * max)
+            };
+        } while (snake.some(p =>
+            p.x === food.x && p.y === food.y
+        ));
     } else {
         snake.pop();
     }
@@ -192,56 +121,30 @@ function update() {
     draw();
 }
 
-function gameOver() {
-    ended = true;
+function end() {
+    running = false;
     clearInterval(timer);
-
-    document.getElementById("info").textContent =
-        "GAME OVER - PRESS RESTART";
-
-    draw();
-
-    ctx.fillStyle = "#253406";
-    ctx.textAlign = "center";
-    ctx.font = "bold 24px monospace";
-    ctx.fillText("GAME OVER", 200, 200);
+    document.getElementById("status").textContent = "GAME OVER";
 }
 
-document.addEventListener("keydown", function(e) {
-    const key = e.key;
+document.addEventListener("keydown", e => {
+    if (!running) return;
 
-    if (["ArrowUp", "ArrowDown",
-          "ArrowLeft", "ArrowRight"].includes(key)) {
-        e.preventDefault();
+    if (e.key === "ArrowUp" && dy !== 1) {
+        dx = 0; dy = -1;
     }
-
-    if (ended) return;
-
-    if (!started) {
-        started = true;
-        document.getElementById("info").textContent =
-            "PLAYING";
+    if (e.key === "ArrowDown" && dy !== -1) {
+        dx = 0; dy = 1;
     }
-
-    if (key === "ArrowUp" && dy !== 1) {
-        dx = 0;
-        dy = -1;
+    if (e.key === "ArrowLeft" && dx !== 1) {
+        dx = -1; dy = 0;
     }
-    else if (key === "ArrowDown" && dy !== -1) {
-        dx = 0;
-        dy = 1;
-    }
-    else if (key === "ArrowLeft" && dx !== 1) {
-        dx = -1;
-        dy = 0;
-    }
-    else if (key === "ArrowRight" && dx !== -1) {
-        dx = 1;
-        dy = 0;
+    if (e.key === "ArrowRight" && dx !== -1) {
+        dx = 1; dy = 0;
     }
 });
 
-resetGame();
+start();
 </script>
 
 </body>
