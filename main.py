@@ -1,133 +1,235 @@
 
-import turtle
-import time
-import random
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake Game</title>
 
-# Pengaturan layar
-layar = turtle.Screen()
-layar.title("Snake Game")
-layar.bgcolor("black")
-layar.setup(width=600, height=600)
-layar.tracer(0)
+<style>
+* {
+    box-sizing: border-box;
+}
 
-# Kepala ular
-kepala = turtle.Turtle()
-kepala.shape("square")
-kepala.color("green")
-kepala.penup()
-kepala.goto(0, 0)
-kepala.direction = "stop"
+body {
+    background: #111;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 0;
+    padding: 20px;
+}
 
-# Makanan
-makanan = turtle.Turtle()
-makanan.shape("circle")
-makanan.color("red")
-makanan.penup()
-makanan.goto(100, 100)
+h1 {
+    color: limegreen;
+}
 
-tubuh = []
+canvas {
+    background: black;
+    border: 3px solid limegreen;
+    max-width: 100%;
+    height: auto;
+}
 
-# Skor
-skor = 0
-pen = turtle.Turtle()
-pen.speed(0)
-pen.color("white")
-pen.penup()
-pen.hideturtle()
-pen.goto(0, 260)
-pen.write("Score: 0", align="center", font=("Arial", 18, "normal"))
+.info {
+    font-size: 20px;
+    margin: 12px;
+}
 
-# Kontrol
-def atas():
-    if kepala.direction != "down":
-        kepala.direction = "up"
+button {
+    padding: 12px 22px;
+    background: limegreen;
+    color: black;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 5px;
+}
 
-def bawah():
-    if kepala.direction != "up":
-        kepala.direction = "down"
+button:hover {
+    background: green;
+    color: white;
+}
+</style>
+</head>
 
-def kiri():
-    if kepala.direction != "right":
-        kepala.direction = "left"
+<body>
 
-def kanan():
-    if kepala.direction != "left":
-        kepala.direction = "right"
+<h1>🐍 SNAKE GAME</h1>
 
-def bergerak():
-    if kepala.direction == "up":
-        kepala.sety(kepala.ycor() + 20)
-    elif kepala.direction == "down":
-        kepala.sety(kepala.ycor() - 20)
-    elif kepala.direction == "left":
-        kepala.setx(kepala.xcor() - 20)
-    elif kepala.direction == "right":
-        kepala.setx(kepala.xcor() + 20)
+<div class="info">
+    Score: <span id="score">0</span>
+</div>
 
-layar.listen()
-layar.onkeypress(atas, "Up")
-layar.onkeypress(bawah, "Down")
-layar.onkeypress(kiri, "Left")
-layar.onkeypress(kanan, "Right")
+<canvas id="game" width="600" height="600"></canvas>
 
-# Game loop
-game_over = False
+<br>
+<button onclick="restartGame()">RESTART</button>
 
-while not game_over:
-    layar.update()
+<p>Gunakan tombol panah ⬆ ⬇ ⬅ ➡</p>
 
-    # Tabrak dinding
-    if abs(kepala.xcor()) > 280 or abs(kepala.ycor()) > 280:
-        game_over = True
-        break
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-    # Gerakkan tubuh
-    for i in range(len(tubuh) - 1, 0, -1):
-        tubuh[i].goto(
-            tubuh[i - 1].xcor(),
-            tubuh[i - 1].ycor()
-        )
+const ukuran = 20;
+const jumlah = 30;
 
-    if len(tubuh) > 0:
-        tubuh[0].goto(kepala.xcor(), kepala.ycor())
+let ular, makanan, arah, skor, gameOver, loop;
 
-    bergerak()
+function restartGame() {
+    ular = [
+        {x: 10, y: 10}
+    ];
 
-    # Makan makanan
-    if kepala.distance(makanan) < 20:
-        x = random.randint(-13, 13) * 20
-        y = random.randint(-13, 12) * 20
-        makanan.goto(x, y)
+    makanan = {
+        x: 20,
+        y: 15
+    };
 
-        bagian = turtle.Turtle()
-        bagian.shape("square")
-        bagian.color("lightgreen")
-        bagian.penup()
-        tubuh.append(bagian)
+    arah = {x: 0, y: 0};
+    skor = 0;
+    gameOver = false;
 
-        skor += 10
-        pen.clear()
-        pen.write(
-            f"Score: {skor}",
-            align="center",
-            font=("Arial", 18, "normal")
-        )
+    document.getElementById("score").textContent = skor;
 
-    # Tabrak tubuh sendiri
-    for bagian in tubuh:
-        if bagian.distance(kepala) < 20:
-            game_over = True
-            break
+    clearInterval(loop);
+    gambar();
+    loop = setInterval(update, 120);
+}
 
-    time.sleep(0.1)
+function gambar() {
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, 600, 600);
 
-# Game Over
-pen.goto(0, 0)
-pen.write(
-    "GAME OVER",
-    align="center",
-    font=("Arial", 30, "bold")
-)
+    // Makanan
+    ctx.fillStyle = "red";
+    ctx.fillRect(
+        makanan.x * ukuran,
+        makanan.y * ukuran,
+        ukuran,
+        ukuran
+    );
 
-layar.update()
-layar.mainloop()
+    // Ular
+    ular.forEach((bagian, index) => {
+        ctx.fillStyle = index === 0 ? "lime" : "lightgreen";
+
+        ctx.fillRect(
+            bagian.x * ukuran,
+            bagian.y * ukuran,
+            ukuran - 2,
+            ukuran - 2
+        );
+    });
+}
+
+function update() {
+    if (gameOver) return;
+
+    if (arah.x === 0 && arah.y === 0) {
+        gambar();
+        return;
+    }
+
+    const kepala = {
+        x: ular[0].x + arah.x,
+        y: ular[0].y + arah.y
+    };
+
+    // Tabrak dinding
+    if (
+        kepala.x < 0 ||
+        kepala.x >= jumlah ||
+        kepala.y < 0 ||
+        kepala.y >= jumlah
+    ) {
+        selesai();
+        return;
+    }
+
+    // Cek makanan
+    const makan =
+        kepala.x === makanan.x &&
+        kepala.y === makanan.y;
+
+    // Tabrak tubuh sendiri
+    const tubuhDicek = makan ? ular : ular.slice(0, -1);
+
+    if (tubuhDicek.some(b =>
+        b.x === kepala.x && b.y === kepala.y
+    )) {
+        selesai();
+        return;
+    }
+
+    ular.unshift(kepala);
+
+    if (makan) {
+        skor += 10;
+        document.getElementById("score").textContent = skor;
+
+        makanan = {
+            x: Math.floor(Math.random() * jumlah),
+            y: Math.floor(Math.random() * jumlah)
+        };
+
+        while (ular.some(b =>
+            b.x === makanan.x && b.y === makanan.y
+        )) {
+            makanan = {
+                x: Math.floor(Math.random() * jumlah),
+                y: Math.floor(Math.random() * jumlah)
+            };
+        }
+    } else {
+        ular.pop();
+    }
+
+    gambar();
+}
+
+function selesai() {
+    gameOver = true;
+    clearInterval(loop);
+
+    ctx.fillStyle = "white";
+    ctx.font = "bold 40px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("GAME OVER", 300, 280);
+
+    ctx.font = "20px Arial";
+    ctx.fillText("Score: " + skor, 300, 320);
+}
+
+document.addEventListener("keydown", function(e) {
+    switch (e.key) {
+        case "ArrowUp":
+            if (arah.y !== 1) arah = {x: 0, y: -1};
+            e.preventDefault();
+            break;
+
+        case "ArrowDown":
+            if (arah.y !== -1) arah = {x: 0, y: 1};
+            e.preventDefault();
+            break;
+
+        case "ArrowLeft":
+            if (arah.x !== 1) arah = {x: -1, y: 0};
+            e.preventDefault();
+            break;
+
+        case "ArrowRight":
+            if (arah.x !== -1) arah = {x: 1, y: 0};
+            e.preventDefault();
+            break;
+    }
+});
+
+restartGame();
+</script>
+
+</body>
+</html>
