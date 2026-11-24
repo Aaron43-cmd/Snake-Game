@@ -1,3 +1,4 @@
+
 import turtle
 import time
 import random
@@ -24,10 +25,19 @@ makanan.color("red")
 makanan.penup()
 makanan.goto(100, 100)
 
-# Tubuh ular
 tubuh = []
 
-# Fungsi gerakan
+# Skor
+skor = 0
+pen = turtle.Turtle()
+pen.speed(0)
+pen.color("white")
+pen.penup()
+pen.hideturtle()
+pen.goto(0, 260)
+pen.write("Score: 0", align="center", font=("Arial", 18, "normal"))
+
+# Kontrol
 def atas():
     if kepala.direction != "down":
         kepala.direction = "up"
@@ -47,18 +57,13 @@ def kanan():
 def bergerak():
     if kepala.direction == "up":
         kepala.sety(kepala.ycor() + 20)
-
-    if kepala.direction == "down":
+    elif kepala.direction == "down":
         kepala.sety(kepala.ycor() - 20)
-
-    if kepala.direction == "left":
+    elif kepala.direction == "left":
         kepala.setx(kepala.xcor() - 20)
-
-    if kepala.direction == "right":
+    elif kepala.direction == "right":
         kepala.setx(kepala.xcor() + 20)
 
-
-# Kontrol keyboard
 layar.listen()
 layar.onkeypress(atas, "Up")
 layar.onkeypress(bawah, "Down")
@@ -66,20 +71,32 @@ layar.onkeypress(kiri, "Left")
 layar.onkeypress(kanan, "Right")
 
 # Game loop
-while True:
+game_over = False
+
+while not game_over:
     layar.update()
 
     # Tabrak dinding
-    if kepala.xcor() > 290 or kepala.xcor() < -290:
+    if abs(kepala.xcor()) > 280 or abs(kepala.ycor()) > 280:
+        game_over = True
         break
 
-    if kepala.ycor() > 290 or kepala.ycor() < -290:
-        break
+    # Gerakkan tubuh
+    for i in range(len(tubuh) - 1, 0, -1):
+        tubuh[i].goto(
+            tubuh[i - 1].xcor(),
+            tubuh[i - 1].ycor()
+        )
 
-    # Jika makan makanan
+    if len(tubuh) > 0:
+        tubuh[0].goto(kepala.xcor(), kepala.ycor())
+
+    bergerak()
+
+    # Makan makanan
     if kepala.distance(makanan) < 20:
-        x = random.randint(-14, 14) * 20
-        y = random.randint(-14, 14) * 20
+        x = random.randint(-13, 13) * 20
+        y = random.randint(-13, 12) * 20
         makanan.goto(x, y)
 
         bagian = turtle.Turtle()
@@ -88,20 +105,29 @@ while True:
         bagian.penup()
         tubuh.append(bagian)
 
-    # Gerakkan tubuh dari belakang
-    for i in range(len(tubuh) - 1, 0, -1):
-        tubuh[i].goto(tubuh[i - 1].xcor(), tubuh[i - 1].ycor())
-
-    if len(tubuh) > 0:
-        tubuh[0].goto(kepala.xcor(), kepala.ycor())
-
-    bergerak()
+        skor += 10
+        pen.clear()
+        pen.write(
+            f"Score: {skor}",
+            align="center",
+            font=("Arial", 18, "normal")
+        )
 
     # Tabrak tubuh sendiri
     for bagian in tubuh:
         if bagian.distance(kepala) < 20:
+            game_over = True
             break
 
     time.sleep(0.1)
 
-layar.bye()
+# Game Over
+pen.goto(0, 0)
+pen.write(
+    "GAME OVER",
+    align="center",
+    font=("Arial", 30, "bold")
+)
+
+layar.update()
+layar.mainloop()
