@@ -4,231 +4,244 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Snake Game</title>
+<title>Snake Nokia Classic</title>
 
 <style>
-* {
-    box-sizing: border-box;
-}
+    body {
+        background: #222;
+        color: #c7d6a5;
+        font-family: monospace;
+        text-align: center;
+        padding: 20px;
+    }
 
-body {
-    background: #111;
-    color: white;
-    font-family: Arial, sans-serif;
-    text-align: center;
-    margin: 0;
-    padding: 20px;
-}
+    h1 {
+        font-size: 26px;
+    }
 
-h1 {
-    color: limegreen;
-}
+    #screen {
+        display: inline-block;
+        background: #9bbc0f;
+        padding: 10px;
+        border: 5px solid #333;
+        border-radius: 8px;
+    }
 
-canvas {
-    background: black;
-    border: 3px solid limegreen;
-    max-width: 100%;
-    height: auto;
-}
+    canvas {
+        display: block;
+        background: #9bbc0f;
+        image-rendering: pixelated;
+    }
 
-.info {
-    font-size: 20px;
-    margin: 12px;
-}
+    button {
+        background: #596b25;
+        color: #d8e7b0;
+        border: 2px solid #9bbc0f;
+        padding: 10px 20px;
+        margin-top: 12px;
+        font-family: monospace;
+        cursor: pointer;
+    }
 
-button {
-    padding: 12px 22px;
-    background: limegreen;
-    color: black;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    margin: 5px;
-}
-
-button:hover {
-    background: green;
-    color: white;
-}
+    #info {
+        margin: 12px;
+        color: #c7d6a5;
+    }
 </style>
 </head>
 
 <body>
 
-<h1>🐍 SNAKE GAME</h1>
+<h1>SNAKE NOKIA</h1>
 
-<div class="info">
-    Score: <span id="score">0</span>
+<div id="screen">
+    <div style="color:#253406; font-weight:bold; padding:5px">
+        SCORE: <span id="score">0</span>
+    </div>
+
+    <canvas id="game" width="400" height="400"></canvas>
 </div>
 
-<canvas id="game" width="600" height="600"></canvas>
+<div id="info">PRESS ARROW KEY TO START</div>
 
 <br>
-<button onclick="restartGame()">RESTART</button>
-
-<p>Gunakan tombol panah ⬆ ⬇ ⬅ ➡</p>
+<button onclick="resetGame()">RESTART</button>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-const ukuran = 20;
-const jumlah = 30;
+const cell = 20;
+const grid = 20;
 
-let ular, makanan, arah, skor, gameOver, loop;
+let snake;
+let food;
+let dx;
+let dy;
+let score;
+let started;
+let ended;
+let timer;
 
-function restartGame() {
-    ular = [
-        {x: 10, y: 10}
+function resetGame() {
+    clearInterval(timer);
+
+    snake = [
+        {x: 8, y: 10},
+        {x: 7, y: 10},
+        {x: 6, y: 10}
     ];
 
-    makanan = {
-        x: 20,
-        y: 15
-    };
+    dx = 0;
+    dy = 0;
+    score = 0;
+    started = false;
+    ended = false;
 
-    arah = {x: 0, y: 0};
-    skor = 0;
-    gameOver = false;
+    document.getElementById("score").textContent = score;
+    document.getElementById("info").textContent =
+        "PRESS ARROW KEY TO START";
 
-    document.getElementById("score").textContent = skor;
+    spawnFood();
+    draw();
 
-    clearInterval(loop);
-    gambar();
-    loop = setInterval(update, 120);
+    timer = setInterval(update, 120);
 }
 
-function gambar() {
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, 600, 600);
+function spawnFood() {
+    do {
+        food = {
+            x: Math.floor(Math.random() * grid),
+            y: Math.floor(Math.random() * grid)
+        };
+    } while (snake.some(part =>
+        part.x === food.x && part.y === food.y
+    ));
+}
+
+function draw() {
+    ctx.fillStyle = "#9bbc0f";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Makanan
-    ctx.fillStyle = "red";
+    ctx.fillStyle = "#253406";
     ctx.fillRect(
-        makanan.x * ukuran,
-        makanan.y * ukuran,
-        ukuran,
-        ukuran
+        food.x * cell,
+        food.y * cell,
+        cell,
+        cell
     );
 
     // Ular
-    ular.forEach((bagian, index) => {
-        ctx.fillStyle = index === 0 ? "lime" : "lightgreen";
-
+    snake.forEach(part => {
+        ctx.fillStyle = "#253406";
         ctx.fillRect(
-            bagian.x * ukuran,
-            bagian.y * ukuran,
-            ukuran - 2,
-            ukuran - 2
+            part.x * cell,
+            part.y * cell,
+            cell,
+            cell
         );
     });
 }
 
 function update() {
-    if (gameOver) return;
+    if (!started || ended) return;
 
-    if (arah.x === 0 && arah.y === 0) {
-        gambar();
-        return;
-    }
-
-    const kepala = {
-        x: ular[0].x + arah.x,
-        y: ular[0].y + arah.y
+    const head = {
+        x: snake[0].x + dx,
+        y: snake[0].y + dy
     };
+
+    const eating =
+        head.x === food.x &&
+        head.y === food.y;
 
     // Tabrak dinding
     if (
-        kepala.x < 0 ||
-        kepala.x >= jumlah ||
-        kepala.y < 0 ||
-        kepala.y >= jumlah
+        head.x < 0 ||
+        head.y < 0 ||
+        head.x >= grid ||
+        head.y >= grid
     ) {
-        selesai();
+        gameOver();
         return;
     }
 
-    // Cek makanan
-    const makan =
-        kepala.x === makanan.x &&
-        kepala.y === makanan.y;
+    // Cek tubuh
+    const checkBody = eating
+        ? snake
+        : snake.slice(0, -1);
 
-    // Tabrak tubuh sendiri
-    const tubuhDicek = makan ? ular : ular.slice(0, -1);
-
-    if (tubuhDicek.some(b =>
-        b.x === kepala.x && b.y === kepala.y
+    if (checkBody.some(part =>
+        part.x === head.x && part.y === head.y
     )) {
-        selesai();
+        gameOver();
         return;
     }
 
-    ular.unshift(kepala);
+    snake.unshift(head);
 
-    if (makan) {
-        skor += 10;
-        document.getElementById("score").textContent = skor;
-
-        makanan = {
-            x: Math.floor(Math.random() * jumlah),
-            y: Math.floor(Math.random() * jumlah)
-        };
-
-        while (ular.some(b =>
-            b.x === makanan.x && b.y === makanan.y
-        )) {
-            makanan = {
-                x: Math.floor(Math.random() * jumlah),
-                y: Math.floor(Math.random() * jumlah)
-            };
-        }
+    if (eating) {
+        score += 10;
+        document.getElementById("score").textContent = score;
+        spawnFood();
     } else {
-        ular.pop();
+        snake.pop();
     }
 
-    gambar();
+    draw();
 }
 
-function selesai() {
-    gameOver = true;
-    clearInterval(loop);
+function gameOver() {
+    ended = true;
+    clearInterval(timer);
 
-    ctx.fillStyle = "white";
-    ctx.font = "bold 40px Arial";
+    document.getElementById("info").textContent =
+        "GAME OVER - PRESS RESTART";
+
+    draw();
+
+    ctx.fillStyle = "#253406";
     ctx.textAlign = "center";
-    ctx.fillText("GAME OVER", 300, 280);
-
-    ctx.font = "20px Arial";
-    ctx.fillText("Score: " + skor, 300, 320);
+    ctx.font = "bold 24px monospace";
+    ctx.fillText("GAME OVER", 200, 200);
 }
 
 document.addEventListener("keydown", function(e) {
-    switch (e.key) {
-        case "ArrowUp":
-            if (arah.y !== 1) arah = {x: 0, y: -1};
-            e.preventDefault();
-            break;
+    const key = e.key;
 
-        case "ArrowDown":
-            if (arah.y !== -1) arah = {x: 0, y: 1};
-            e.preventDefault();
-            break;
+    if (["ArrowUp", "ArrowDown",
+          "ArrowLeft", "ArrowRight"].includes(key)) {
+        e.preventDefault();
+    }
 
-        case "ArrowLeft":
-            if (arah.x !== 1) arah = {x: -1, y: 0};
-            e.preventDefault();
-            break;
+    if (ended) return;
 
-        case "ArrowRight":
-            if (arah.x !== -1) arah = {x: 1, y: 0};
-            e.preventDefault();
-            break;
+    if (!started) {
+        started = true;
+        document.getElementById("info").textContent =
+            "PLAYING";
+    }
+
+    if (key === "ArrowUp" && dy !== 1) {
+        dx = 0;
+        dy = -1;
+    }
+    else if (key === "ArrowDown" && dy !== -1) {
+        dx = 0;
+        dy = 1;
+    }
+    else if (key === "ArrowLeft" && dx !== 1) {
+        dx = -1;
+        dy = 0;
+    }
+    else if (key === "ArrowRight" && dx !== -1) {
+        dx = 1;
+        dy = 0;
     }
 });
 
-restartGame();
+resetGame();
 </script>
 
 </body>
