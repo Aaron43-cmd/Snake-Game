@@ -1,151 +1,160 @@
 
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Snake Mini</title>
+import turtle
+import random
 
-<style>
-body {
-    background: #222;
-    color: white;
-    text-align: center;
-    font-family: monospace;
-}
+# Pengaturan layar
+screen = turtle.Screen()
+screen.title("Snake Nokia Classic")
+screen.bgcolor("#9bbc0f")
+screen.setup(600, 600)
+screen.tracer(0)
 
-canvas {
-    background: #9bbc0f;
-    display: block;
-    margin: 15px auto;
-    border: 3px solid #111;
-}
+# Kepala ular
+head = turtle.Turtle()
+head.shape("square")
+head.color("#253406")
+head.penup()
+head.goto(0, 0)
 
-button {
-    padding: 8px 20px;
-    cursor: pointer;
-}
-</style>
-</head>
+# Makanan
+food = turtle.Turtle()
+food.shape("square")
+food.color("#253406")
+food.penup()
 
-<body>
+# Tulisan skor
+pen = turtle.Turtle()
+pen.hideturtle()
+pen.penup()
+pen.color("#253406")
+pen.goto(0, 260)
 
-<h2>SNAKE MINI</h2>
-<p>Score: <span id="score">0</span></p>
+# Data game
+snake = [(0, 0)]
+segments = []
+direction = "stop"
+score = 0
+game_over = False
 
-<canvas id="game" width="300" height="300"></canvas>
+def update_score():
+    pen.clear()
+    pen.write(
+        "SCORE: " + str(score),
+        align="center",
+        font=("Arial", 16, "bold")
+    )
 
-<p id="status">Tekan tombol panah untuk mulai</p>
-<button onclick="start()">RESTART</button>
+def spawn_food():
+    while True:
+        x = random.randint(-14, 14) * 20
+        y = random.randint(-14, 11) * 20
 
-<script>
-const c = document.getElementById("game");
-const ctx = c.getContext("2d");
-const size = 15;
-const max = 20;
+        if (x, y) not in snake:
+            food.goto(x, y)
+            break
 
-let snake, food, dx, dy, score, running, timer;
+def up():
+    global direction
+    if direction != "down":
+        direction = "up"
 
-function start() {
-    clearInterval(timer);
+def down():
+    global direction
+    if direction != "up":
+        direction = "down"
 
-    snake = [{x: 10, y: 10}];
-    food = {x: 15, y: 10};
-    dx = 0;
-    dy = 0;
-    score = 0;
-    running = true;
+def left():
+    global direction
+    if direction != "right":
+        direction = "left"
 
-    document.getElementById("score").textContent = 0;
-    document.getElementById("status").textContent = "PLAYING";
+def right():
+    global direction
+    if direction != "left":
+        direction = "right"
 
-    draw();
-    timer = setInterval(update, 150);
-}
+def game_loop():
+    global snake, score, game_over
 
-function draw() {
-    ctx.fillStyle = "#9bbc0f";
-    ctx.fillRect(0, 0, 300, 300);
+    if game_over:
+        return
 
-    ctx.fillStyle = "#253406";
-    ctx.fillRect(food.x * size, food.y * size, size, size);
+    if direction != "stop":
+        x, y = snake[0]
 
-    for (let p of snake) {
-        ctx.fillRect(p.x * size, p.y * size, size, size);
-    }
-}
+        if direction == "up":
+            y += 20
+        elif direction == "down":
+            y -= 20
+        elif direction == "left":
+            x -= 20
+        elif direction == "right":
+            x += 20
 
-function update() {
-    if (dx === 0 && dy === 0) return;
+        new_head = (x, y)
+        eating = head.distance(food) < 1
 
-    let head = {
-        x: snake[0].x + dx,
-        y: snake[0].y + dy
-    };
+        # Tabrak dinding
+        if abs(x) > 280 or abs(y) > 280:
+            end_game()
+            return
 
-    let eating = head.x === food.x && head.y === food.y;
+        # Tabrak tubuh
+        check_body = snake if eating else snake[:-1]
 
-    if (
-        head.x < 0 || head.y < 0 ||
-        head.x >= max || head.y >= max
-    ) {
-        end();
-        return;
-    }
+        if new_head in check_body:
+            end_game()
+            return
 
-    let body = eating ? snake : snake.slice(0, -1);
+        snake.insert(0, new_head)
 
-    if (body.some(p => p.x === head.x && p.y === head.y)) {
-        end();
-        return;
-    }
+        if not eating:
+            snake.pop()
+        else:
+            score += 10
+            update_score()
+            spawn_food()
 
-    snake.unshift(head);
+        # Tambah segmen jika diperlukan
+        while len(segments) < len(snake) - 1:
+            part = turtle.Turtle()
+            part.shape("square")
+            part.color("#253406")
+            part.penup()
+            segments.append(part)
 
-    if (eating) {
-        score += 10;
-        document.getElementById("score").textContent = score;
+        # Gambar ular
+        head.goto(snake[0])
 
-        do {
-            food = {
-                x: Math.floor(Math.random() * max),
-                y: Math.floor(Math.random() * max)
-            };
-        } while (snake.some(p =>
-            p.x === food.x && p.y === food.y
-        ));
-    } else {
-        snake.pop();
-    }
+        for i, part in enumerate(segments):
+            part.goto(snake[i + 1])
 
-    draw();
-}
+    screen.update()
 
-function end() {
-    running = false;
-    clearInterval(timer);
-    document.getElementById("status").textContent = "GAME OVER";
-}
+    # Timer, bukan loop berat
+    screen.ontimer(game_loop, 120)
 
-document.addEventListener("keydown", e => {
-    if (!running) return;
+def end_game():
+    global game_over
+    game_over = True
 
-    if (e.key === "ArrowUp" && dy !== 1) {
-        dx = 0; dy = -1;
-    }
-    if (e.key === "ArrowDown" && dy !== -1) {
-        dx = 0; dy = 1;
-    }
-    if (e.key === "ArrowLeft" && dx !== 1) {
-        dx = -1; dy = 0;
-    }
-    if (e.key === "ArrowRight" && dx !== -1) {
-        dx = 1; dy = 0;
-    }
-});
+    pen.goto(0, 0)
+    pen.write(
+        "GAME OVER\nSCORE: " + str(score),
+        align="center",
+        font=("Arial", 22, "bold")
+    )
 
-start();
-</script>
+# Kontrol keyboard
+screen.listen()
+screen.onkeypress(up, "Up")
+screen.onkeypress(down, "Down")
+screen.onkeypress(left, "Left")
+screen.onkeypress(right, "Right")
 
-</body>
-</html>
+# Mulai permainan
+spawn_food()
+update_score()
+game_loop()
+
+screen.mainloop()
